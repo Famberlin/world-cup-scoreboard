@@ -1,6 +1,6 @@
 # Implementation plan and API specification
 
-Status: proposal, no code yet. This document is the contract the implementation is built and reviewed against.
+Status: implemented. This document is the contract the implementation was built and reviewed against.
 Decisions summarised here are carried into `README.md` (assumptions, reasoning, trade-offs) as they are implemented.
 
 ## 1. Goals and scope

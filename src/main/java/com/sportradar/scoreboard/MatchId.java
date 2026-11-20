@@ -1,6 +1,5 @@
 package com.sportradar.scoreboard;
 
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -14,10 +13,10 @@ public record MatchId(UUID value) {
     /**
      * Creates an id.
      *
-     * @throws NullPointerException if {@code value} is null
+     * @throws IllegalArgumentException if {@code value} is null
      */
     public MatchId {
-        Objects.requireNonNull(value, "value");
+        Arguments.requireNotNull(value, "value");
     }
 
     static MatchId random() {

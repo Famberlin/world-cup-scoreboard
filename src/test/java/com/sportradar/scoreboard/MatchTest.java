@@ -2,7 +2,6 @@ package com.sportradar.scoreboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -40,10 +39,10 @@ class MatchTest {
     }
 
     @Test
-    void rejectsMissingIdOrTeams() {
-        assertThatNullPointerException().isThrownBy(() -> new Match(null, "Spain", "Brazil", 0, 0, 1));
-        assertThatNullPointerException().isThrownBy(() -> new Match(ID, null, "Brazil", 0, 0, 1));
-        assertThatNullPointerException().isThrownBy(() -> new Match(ID, "Spain", null, 0, 0, 1));
+    void rejectsNullIdOrTeams() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new Match(null, "Spain", "Brazil", 0, 0, 1));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Match(ID, null, "Brazil", 0, 0, 1));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Match(ID, "Spain", null, 0, 0, 1));
     }
 
     @Test
@@ -60,7 +59,7 @@ class MatchTest {
 
     @Test
     void matchIdRequiresValueAndRandomIdsDiffer() {
-        assertThatNullPointerException().isThrownBy(() -> new MatchId(null));
+        assertThatIllegalArgumentException().isThrownBy(() -> new MatchId(null));
         assertThat(MatchId.random()).isNotEqualTo(MatchId.random());
     }
 }

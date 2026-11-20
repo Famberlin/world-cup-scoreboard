@@ -85,8 +85,9 @@ how to run it against an implementation.
   disallowed goal.
 - Updating or finishing an unknown or already finished match throws `MatchNotFoundException`; finishing twice is a
   caller error, not a no-op.
-- Null arguments throw `NullPointerException`; blank names, the same team on both sides and negative scores throw
-  `IllegalArgumentException`.
+- Every invalid argument throws `IllegalArgumentException`: null arguments, blank names, the same team on both
+  sides and negative scores. Callers handle one exception type for bad input; the library never throws
+  `NullPointerException` on purpose.
 - "Most recently started" means the order of `startMatch` calls, not a clock.
 
 ## Reasoning

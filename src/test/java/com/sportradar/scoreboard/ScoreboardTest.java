@@ -2,7 +2,6 @@ package com.sportradar.scoreboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sportradar.scoreboard.store.InMemoryMatchStore;
@@ -32,9 +31,9 @@ class ScoreboardTest {
     }
 
     @Test
-    void startRejectsMissingOrBlankTeams() {
-        assertThatNullPointerException().isThrownBy(() -> scoreboard.startMatch(null, "Canada"));
-        assertThatNullPointerException().isThrownBy(() -> scoreboard.startMatch("Mexico", null));
+    void startRejectsNullOrBlankTeams() {
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.startMatch(null, "Canada"));
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.startMatch("Mexico", null));
         assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.startMatch("  ", "Canada"));
         assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.startMatch("Mexico", ""));
         assertThat(scoreboard.getSummary()).isEmpty();
@@ -101,8 +100,8 @@ class ScoreboardTest {
     }
 
     @Test
-    void updateRejectsMissingId() {
-        assertThatNullPointerException().isThrownBy(() -> scoreboard.updateScore(null, 1, 0));
+    void updateRejectsNullId() {
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.updateScore(null, 1, 0));
     }
 
     @Test
@@ -137,8 +136,8 @@ class ScoreboardTest {
     }
 
     @Test
-    void finishRejectsMissingId() {
-        assertThatNullPointerException().isThrownBy(() -> scoreboard.finishMatch(null));
+    void finishRejectsNullId() {
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.finishMatch(null));
     }
 
     @Test
@@ -200,8 +199,8 @@ class ScoreboardTest {
     }
 
     @Test
-    void rejectsMissingStore() {
-        assertThatNullPointerException().isThrownBy(() -> new Scoreboard(null));
+    void rejectsNullStore() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new Scoreboard(null));
     }
 
     @Test

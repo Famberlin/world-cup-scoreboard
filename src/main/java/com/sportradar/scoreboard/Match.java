@@ -1,7 +1,5 @@
 package com.sportradar.scoreboard;
 
-import java.util.Objects;
-
 /**
  * Immutable snapshot of a match. Every change on the scoreboard produces a new snapshot, so instances can be shared
  * freely between threads.
@@ -21,15 +19,15 @@ public record Match(MatchId id, String homeTeam, String awayTeam, int homeScore,
     /**
      * Creates a snapshot.
      *
-     * @throws NullPointerException if {@code id} or a team name is null
-     * @throws IllegalArgumentException if a team name is blank or a score is negative
+     * @throws IllegalArgumentException if {@code id} or a team name is null, a team name is blank, or a score is
+     *     negative
      */
     public Match {
-        Objects.requireNonNull(id, "id");
-        homeTeam = requireTeam(homeTeam, "homeTeam");
-        awayTeam = requireTeam(awayTeam, "awayTeam");
-        requireScore(homeScore, "homeScore");
-        requireScore(awayScore, "awayScore");
+        Arguments.requireNotNull(id, "id");
+        homeTeam = Arguments.requireTeam(homeTeam, "homeTeam");
+        awayTeam = Arguments.requireTeam(awayTeam, "awayTeam");
+        Arguments.requireScore(homeScore, "homeScore");
+        Arguments.requireScore(awayScore, "awayScore");
     }
 
     /**
@@ -57,20 +55,5 @@ public record Match(MatchId id, String homeTeam, String awayTeam, int homeScore,
     @Override
     public String toString() {
         return homeTeam + " " + homeScore + " - " + awayTeam + " " + awayScore;
-    }
-
-    static String requireTeam(String team, String name) {
-        Objects.requireNonNull(team, name);
-        String stripped = team.strip();
-        if (stripped.isEmpty()) {
-            throw new IllegalArgumentException(name + " must not be blank");
-        }
-        return stripped;
-    }
-
-    private static void requireScore(int score, String name) {
-        if (score < 0) {
-            throw new IllegalArgumentException(name + " must not be negative, was " + score);
-        }
     }
 }

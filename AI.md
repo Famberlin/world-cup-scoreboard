@@ -108,6 +108,14 @@ Result: the library implemented test-first on `feature/scoreboard-core-operation
 concurrency tests, and, in its own commit, finished match results with automatic cleanup. README filled in with
 assumptions, reasoning and trade-offs.
 
+### 5. Review: null arguments
+
+> should be checked and throw IllegalArgumentException. Cleanup any explicit Nullpointer throws
+
+(PR review comment on the plan's `startMatch` exceptions.) Result: null arguments now throw
+`IllegalArgumentException` everywhere through a package-private `Arguments` helper; all `Objects.requireNonNull`
+calls and `NullPointerException` docs removed.
+
 ## Artifacts
 
 - `AGENTS.md` / `CLAUDE.md`: rules given to coding agents working in this repo.

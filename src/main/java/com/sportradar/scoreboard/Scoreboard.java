@@ -4,7 +4,6 @@ import com.sportradar.scoreboard.store.InMemoryMatchStore;
 import com.sportradar.scoreboard.store.MatchStore;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -44,7 +43,7 @@ public final class Scoreboard {
      * Creates a scoreboard backed by the given store. The scoreboard becomes the store's only writer.
      *
      * @param store where matches in progress are kept
-     * @throws NullPointerException if {@code store} is null
+     * @throws IllegalArgumentException if {@code store} is null
      */
     public Scoreboard(MatchStore store) {
         this(store, DEFAULT_RESULTS_LIMIT);
@@ -56,14 +55,13 @@ public final class Scoreboard {
      *
      * @param store where matches in progress and results are kept
      * @param resultsLimit maximum number of finished match results to keep
-     * @throws NullPointerException if {@code store} is null
-     * @throws IllegalArgumentException if {@code resultsLimit} is less than 1
+     * @throws IllegalArgumentException if {@code store} is null or {@code resultsLimit} is less than 1
      */
     public Scoreboard(MatchStore store, int resultsLimit) {
         if (resultsLimit < 1) {
             throw new IllegalArgumentException("resultsLimit must be at least 1, was " + resultsLimit);
         }
-        this.store = Objects.requireNonNull(store, "store");
+        this.store = Arguments.requireNotNull(store, "store");
         this.resultsLimit = resultsLimit;
     }
 
@@ -74,13 +72,12 @@ public final class Scoreboard {
      * @param homeTeam home team name
      * @param awayTeam away team name
      * @return snapshot of the new match, carrying the id used by the other operations
-     * @throws NullPointerException if a team name is null
-     * @throws IllegalArgumentException if a team name is blank, or both names are the same team
+     * @throws IllegalArgumentException if a team name is null or blank, or both names are the same team
      * @throws TeamAlreadyPlayingException if either team is already in a match in progress
      */
     public Match startMatch(String homeTeam, String awayTeam) {
-        String home = Match.requireTeam(homeTeam, "homeTeam");
-        String away = Match.requireTeam(awayTeam, "awayTeam");
+        String home = Arguments.requireTeam(homeTeam, "homeTeam");
+        String away = Arguments.requireTeam(awayTeam, "awayTeam");
         if (home.equalsIgnoreCase(away)) {
             throw new IllegalArgumentException("A team cannot play against itself: " + home);
         }
@@ -104,12 +101,11 @@ public final class Scoreboard {
      * @param homeScore new home score
      * @param awayScore new away score
      * @return snapshot of the updated match
-     * @throws NullPointerException if {@code id} is null
-     * @throws IllegalArgumentException if a score is negative
+     * @throws IllegalArgumentException if {@code id} is null or a score is negative
      * @throws MatchNotFoundException if no match in progress has this id
      */
     public Match updateScore(MatchId id, int homeScore, int awayScore) {
-        Objects.requireNonNull(id, "id");
+        Arguments.requireNotNull(id, "id");
         if (homeScore < 0 || awayScore < 0) {
             throw new IllegalArgumentException("Scores must not be negative, were " + homeScore + " and " + awayScore);
         }
@@ -126,11 +122,11 @@ public final class Scoreboard {
      *
      * @param id id of the match
      * @return the final snapshot of the match
-     * @throws NullPointerException if {@code id} is null
+     * @throws IllegalArgumentException if {@code id} is null
      * @throws MatchNotFoundException if no match in progress has this id, including one already finished
      */
     public Match finishMatch(MatchId id) {
-        Objects.requireNonNull(id, "id");
+        Arguments.requireNotNull(id, "id");
         return write(() -> {
             Match match = find(id);
             store.delete(id);

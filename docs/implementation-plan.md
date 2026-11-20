@@ -1,6 +1,8 @@
 # Implementation plan and API specification
 
-Status: proposal, no code yet. This document is the contract the implementation is built and reviewed against.
+Status: implemented. This document is the contract the implementation was built and reviewed against.
+One deviation: a null team name or id throws `NullPointerException` (the JDK convention), not
+`IllegalArgumentException`; blank names and negative scores still throw `IllegalArgumentException`.
 Decisions summarised here are carried into `README.md` (assumptions, reasoning, trade-offs) as they are implemented.
 
 ## 1. Goals and scope
@@ -59,7 +61,8 @@ public final class Scoreboard {
      * Starts a match with score 0 - 0 and adds it to the scoreboard.
      *
      * @return snapshot of the new match, carrying the id used by the other operations
-     * @throws IllegalArgumentException     a team name is null or blank, or both names are the same team
+     * @throws NullPointerException         a team name is null
+     * @throws IllegalArgumentException     a team name is blank, or both names are the same team
      * @throws TeamAlreadyPlayingException  either team is already in a match in progress
      */
     public Match startMatch(String homeTeam, String awayTeam);

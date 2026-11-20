@@ -10,7 +10,8 @@ simultaneous matches.
 3. Finish a match
 4. Get a summary of matches in progress, ordered by total score (descending), ties broken by the most
    recently started match first
-5. Additional feature: _to be decided_
+5. Additional feature: finished match results (`getFinishedMatches()`) with automatic cleanup of the oldest
+   results beyond a limit; see the plan for why
 
 ## Build and test
 
@@ -25,9 +26,16 @@ On an older JDK, add `-Djava.version=<version>` locally (e.g. `bash scripts/buil
 
 Library code lives in `com.sportradar.scoreboard`. Contributor and agent rules: `AGENTS.md`.
 
+## Design
+
+Implementation plan and API specification: [`docs/implementation-plan.md`](docs/implementation-plan.md).
+In short: `Scoreboard` is the thread-safe entry point and owns every business rule; storage is pluggable through
+the `MatchStore` interface, with `InMemoryMatchStore` as the default.
+
 ## Assumptions
 
-_To be written._
+_To be written as the implementation lands. The proposed answers to the open questions are in
+[`docs/implementation-plan.md`](docs/implementation-plan.md#4-decisions-on-the-open-questions)._
 
 ## Reasoning
 

@@ -109,8 +109,8 @@ how to run it against an implementation.
 
 - A match is identified by the `MatchId` returned from `startMatch`, not by its team names.
 - Team names are stripped, normalized to Unicode NFC and otherwise kept as given. They are compared ignoring case,
-  so "Spain" and "spain" are the same team, and NFC makes a precomposed "Côte d'Ivoire" and one spelled with a
-  combining accent the same team too.
+  so "Spain" and "spain" are the same team, and NFC makes "C\u00F4te d'Ivoire" (precomposed o with
+  circumflex) and "Co\u0302te d'Ivoire" (o plus a combining circumflex) the same team too.
 - A team name is at most `Match.MAX_TEAM_NAME_LENGTH` (64) code points after stripping and normalization; the
   longest FIFA member name has about 30. Control characters and invisible format characters (zero-width space and
   joiners, soft hyphen, bidi overrides, byte order mark: Unicode categories Cc and Cf) are rejected, not removed.

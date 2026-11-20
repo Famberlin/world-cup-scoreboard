@@ -136,9 +136,9 @@ module. CI got a Snyk job that runs only when a `SNYK_TOKEN` secret exists and i
 > add a top-level permissions: contents: read, pin every action (snyk/actions/setup, actions/checkout,
 > actions/setup-java) to a full commit SHA with the version tag in a comment, set persist-credentials: false on all
 > checkout steps, and add a Dependabot config for GitHub Actions. In the library, cap scores at a documented maximum
-> in Arguments.requireScore so totalScore() can’t overflow, and tighten Arguments.requireTeam to apply NFC
+> in Arguments.requireScore so totalScore() can't overflow, and tighten Arguments.requireTeam to apply NFC
 > normalization, reject control and invisible format characters, and enforce a maximum name length, so lookalike
-> names can’t bypass the same-team or already-playing checks. Write tests first for each rule, keep the coverage gate
+> names can't bypass the same-team or already-playing checks. Write tests first for each rule, keep the coverage gate
 > green, document the new limits under assumptions in the README
 
 Result: on `bugfix/security-hardening`, the workflow got a read-only token, SHA-pinned actions (existing major

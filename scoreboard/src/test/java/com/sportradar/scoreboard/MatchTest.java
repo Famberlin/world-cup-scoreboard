@@ -46,6 +46,21 @@ class MatchTest {
     }
 
     @Test
+    void rejectsScoresAboveMaximum() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new Match(ID, "Spain", "Brazil", Match.MAX_SCORE + 1, 0, 1));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new Match(ID, "Spain", "Brazil", 0, Match.MAX_SCORE + 1, 1));
+    }
+
+    @Test
+    void teamNamesAreNormalizedToNfc() {
+        Match match = new Match(ID, "Co\u0302te d'Ivoire", "Brazil", 0, 0, 1);
+
+        assertThat(match.homeTeam()).isEqualTo("C\u00f4te d'Ivoire");
+    }
+
+    @Test
     void rejectsBlankTeamNames() {
         assertThatIllegalArgumentException().isThrownBy(() -> new Match(ID, " ", "Brazil", 0, 0, 1));
         assertThatIllegalArgumentException().isThrownBy(() -> new Match(ID, "Spain", "", 0, 0, 1));

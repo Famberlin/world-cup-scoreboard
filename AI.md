@@ -130,6 +130,24 @@ configuration; the library moved to the `scoreboard/` module, keeping its artifa
 `${revision}${sha1}${changelist}` with `flatten-maven-plugin`. `scripts/build.sh` reads test reports from every
 module. CI got a Snyk job that runs only when a `SNYK_TOKEN` secret exists and is skipped otherwise.
 
+### 7. Build and library security hardening
+
+> Harden the build and the library in one PR on a bugfix/security-hardening branch. In .github/workflows/build.yml,
+> add a top-level permissions: contents: read, pin every action (snyk/actions/setup, actions/checkout,
+> actions/setup-java) to a full commit SHA with the version tag in a comment, set persist-credentials: false on all
+> checkout steps, and add a Dependabot config for GitHub Actions. In the library, cap scores at a documented maximum
+> in Arguments.requireScore so totalScore() can’t overflow, and tighten Arguments.requireTeam to apply NFC
+> normalization, reject control and invisible format characters, and enforce a maximum name length, so lookalike
+> names can’t bypass the same-team or already-playing checks. Write tests first for each rule, keep the coverage gate
+> green, document the new limits under assumptions in the README
+
+Result: on `bugfix/security-hardening`, the workflow got a read-only token, SHA-pinned actions (existing major
+versions kept, Snyk moved off `master` to `v1.0.0`), `persist-credentials: false` and a Dependabot config, in one
+commit. In a second commit, test first: scores capped at `Match.MAX_SCORE` (999), team names NFC-normalized,
+limited to `Match.MAX_TEAM_NAME_LENGTH` (64) code points and rejected when they contain Unicode control (Cc) or
+format (Cf) characters. `updateScore` now uses the same `Arguments.requireScore` check. README assumptions and CI
+section updated.
+
 ## Artifacts
 
 - `AGENTS.md` / `CLAUDE.md`: rules given to coding agents working in this repo.

@@ -59,7 +59,7 @@ public record Match(MatchId id, String homeTeam, String awayTeam, int homeScore,
         return homeTeam + " " + homeScore + " - " + awayTeam + " " + awayScore;
     }
 
-    private static String requireTeam(String team, String name) {
+    static String requireTeam(String team, String name) {
         Objects.requireNonNull(team, name);
         String stripped = team.strip();
         if (stripped.isEmpty()) {

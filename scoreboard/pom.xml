@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.sportradar</groupId>
+        <artifactId>world-cup-scoreboard-parent</artifactId>
+        <version>${revision}${sha1}${changelist}</version>
+    </parent>
+
+    <!-- Same coordinates as before the split, so consumers of the library see no change. -->
+    <artifactId>world-cup-scoreboard</artifactId>
+    <packaging>jar</packaging>
+
+    <name>world-cup-scoreboard</name>
+    <description>In-memory Live Football World Cup Scoreboard library.</description>
+
+    <!-- No runtime dependencies: the library is plain Java. Test dependencies and plugin setup come from the parent. -->
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>com.sportradar.scoreboard</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

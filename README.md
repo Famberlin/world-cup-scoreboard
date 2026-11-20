@@ -49,6 +49,35 @@ On an older JDK, add `-Djava.version=<version>` locally (e.g. `bash scripts/buil
 
 Library code lives in `com.sportradar.scoreboard`. Contributor and agent rules: `AGENTS.md`.
 
+### Project layout
+
+A parent POM at the root and one module, `scoreboard/`, with the library (artifact
+`com.sportradar:world-cup-scoreboard`, unchanged by the split). The parent holds everything shared: Java version,
+dependency and plugin versions, the test dependencies (JUnit, AssertJ) and the configuration of the compiler,
+Surefire, JaCoCo, Spotless and flatten plugins. A module POM only adds what is specific to it, here the jar's
+`Automatic-Module-Name`. Further modules (for example a persistent `MatchStore` or a demo app) get the same build
+without copying it. Build from the root; the JaCoCo gate applies per module.
+
+### Versioning
+
+Maven CI-friendly versions: the version is `${revision}${sha1}${changelist}`, defined once in the parent
+(`1.0` + `-SNAPSHOT`) and inherited by every module. CI or a release overrides it without editing a POM:
+
+```bash
+mvn verify -Drevision=1.2.0 -Dchangelist=          # release 1.2.0
+mvn verify -Dsha1=-$(git rev-parse --short HEAD)   # 1.0-abc1234-SNAPSHOT, traceable snapshot
+```
+
+`flatten-maven-plugin` (mode `resolveCiFriendliesOnly`) writes the resolved version into the installed and
+deployed POMs, so consumers never see `${revision}`. The generated `.flattened-pom.xml` files are git-ignored.
+
+### CI
+
+GitHub Actions runs `mvn verify` with a check-only Spotless on every push to `main` and every pull request. A Snyk
+dependency scan (`snyk test`, all modules, fails on high severity or above) runs only when the repository has a
+`SNYK_TOKEN` secret; without it the job shows as skipped and the build stays green. Pull requests from forks get
+no secrets, so they skip it too.
+
 ## Design
 
 Implementation plan and API specification: [`docs/implementation-plan.md`](docs/implementation-plan.md).
@@ -122,5 +151,10 @@ how to run it against an implementation.
 - **The storage interface grew with the feature.** Adding `appendFinished`, `findFinished` and `trimFinished` would
   break custom stores written against the first version. Accepted because nothing is released yet; after a release
   this would use default methods or a separate interface.
+- **Multi-module build for a single library.** One module does not need a parent POM yet. Splitting now keeps
+  shared build setup in one place, so a new module (a persistent store, a demo) is a short POM, at the cost of one
+  extra POM and a `scoreboard/` directory level.
+- **Snyk as an optional job.** Skipped without a token instead of failing, so forks and clones build without a
+  Snyk account. The cost is that a missing secret silently skips the scan; the skipped job is visible in the checks.
 - **No persistence, events or multi-process consistency.** Out of scope for an in-memory library; the storage
   interface is the extension point if they are needed.

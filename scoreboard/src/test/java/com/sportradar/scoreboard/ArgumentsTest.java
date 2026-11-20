@@ -9,8 +9,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class ArgumentsTest {
 
-    private static final String COMPOSED = "Côte d'Ivoire";
-    private static final String DECOMPOSED = "Côte d'Ivoire";
+    private static final String COMPOSED = "C\u00f4te d'Ivoire";
+    private static final String DECOMPOSED = "Co\u0302te d'Ivoire";
 
     @Test
     void scoreUpToMaximumIsAccepted() {
@@ -47,12 +47,12 @@ class ArgumentsTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "Spa​in", // zero-width space
-                "Spa‍in", // zero-width joiner
-                "Spa­in", // soft hyphen
-                "‮Spain", // right-to-left override
-                "Spain⁠", // word joiner
-                "﻿Spain" // byte order mark
+                "Spa\u200bin", // zero-width space
+                "Spa\u200din", // zero-width joiner
+                "Spa\u00adin", // soft hyphen
+                "\u202eSpain", // right-to-left override
+                "Spain\u2060", // word joiner
+                "\ufeffSpain" // byte order mark
             })
     void teamNameWithInvisibleFormatCharacterIsRejected(String team) {
         assertThatIllegalArgumentException()
@@ -76,14 +76,14 @@ class ArgumentsTest {
 
     @Test
     void teamNameLengthIsCountedAfterNormalization() {
-        String decomposed = "ô".repeat(Match.MAX_TEAM_NAME_LENGTH);
+        String decomposed = "o\u0302".repeat(Match.MAX_TEAM_NAME_LENGTH);
 
         assertThat(Arguments.requireTeam(decomposed, "team")).hasSize(Match.MAX_TEAM_NAME_LENGTH);
     }
 
     @Test
     void teamNameLengthCountsCodePoints() {
-        String emoji = "🏴"; // one code point, two chars
+        String emoji = "\ud83c\udff4"; // one code point, two chars
         String longest = emoji.repeat(Match.MAX_TEAM_NAME_LENGTH);
 
         assertThat(Arguments.requireTeam(longest, "team")).isEqualTo(longest);

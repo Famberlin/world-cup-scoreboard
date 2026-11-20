@@ -117,7 +117,7 @@ how to run it against an implementation.
   Otherwise "Spa\u200Bin" would look like "Spain" on screen but count as another team, and slip past the same-team
   and already-playing checks.
 - NFC is canonical, not compatibility, normalization: fullwidth or styled letters and lookalikes from other scripts
-  (a Cyrillic "а" in "Spаin") are still different teams. Catching those needs a confusables table, which is out of
+  (a Cyrillic `U+0430` "a" in "Spain") are still different teams. Catching those needs a confusables table, which is out of
   scope for a scoreboard that receives names from its own operator.
 - A team plays at most one match at a time. Starting a match for a team already in a match in progress throws
   `TeamAlreadyPlayingException`; this also catches starting the same match twice. A team may play again once its

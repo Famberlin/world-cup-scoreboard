@@ -73,6 +73,13 @@ Result: Maven scaffolding only (no scoreboard logic yet). Base package `com.spor
 JUnit 6, AssertJ, JaCoCo line-coverage gate, Spotless formatting, GitHub Actions CI, and agent instructions
 (`AGENTS.md`, imported by `CLAUDE.md`) written to keep build and test output out of the model's context.
 
+### 2. Branch naming
+
+> add branch naming to instructions and skill: branch names {feature|bugfix}/{short-feature-summary}, rename current
+> branch accourdingly
+
+Result: rule added to `AGENTS.md`; setup branch renamed to `feature/maven-project-scaffold`.
+
 ## Artifacts
 
 - `AGENTS.md` / `CLAUDE.md`: rules given to coding agents working in this repo.

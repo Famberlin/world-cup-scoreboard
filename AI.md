@@ -80,7 +80,17 @@ JUnit 6, AssertJ, JaCoCo line-coverage gate, Spotless formatting, GitHub Actions
 
 Result: rule added to `AGENTS.md`; setup branch renamed to `feature/maven-project-scaffold`.
 
+### 3. Implementation plan and API specification
+
+> prepare implementation plan. API specification. library provides interface for registering/storing scores,
+> allowing to initialize custom data storage, with default in-memory implementation
+
+Result: `docs/implementation-plan.md` with the public API, the `MatchStore` storage SPI and its in-memory default,
+decisions on the open questions (validation, duplicate teams, start ordering, concurrency, immutability), the
+implementation steps, and candidate extra features. No library code yet.
+
 ## Artifacts
 
 - `AGENTS.md` / `CLAUDE.md`: rules given to coding agents working in this repo.
 - `scripts/build.sh`: quiet build wrapper the agent uses so only failures reach its context.
+- `docs/implementation-plan.md`: implementation plan and API specification the code is built against.

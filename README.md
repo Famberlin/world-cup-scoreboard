@@ -25,9 +25,16 @@ On an older JDK, add `-Djava.version=<version>` locally (e.g. `bash scripts/buil
 
 Library code lives in `com.sportradar.scoreboard`. Contributor and agent rules: `AGENTS.md`.
 
+## Design
+
+Implementation plan and API specification: [`docs/implementation-plan.md`](docs/implementation-plan.md).
+In short: `Scoreboard` is the thread-safe entry point and owns every business rule; storage is pluggable through
+the `MatchStore` interface, with `InMemoryMatchStore` as the default.
+
 ## Assumptions
 
-_To be written._
+_To be written as the implementation lands. The proposed answers to the open questions are in
+[`docs/implementation-plan.md`](docs/implementation-plan.md#4-decisions-on-the-open-questions)._
 
 ## Reasoning
 

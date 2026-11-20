@@ -10,7 +10,8 @@ simultaneous matches.
 3. Finish a match
 4. Get a summary of matches in progress, ordered by total score (descending), ties broken by the most
    recently started match first
-5. Additional feature: finished match results (`getFinishedMatches()`), see the plan for why
+5. Additional feature: finished match results (`getFinishedMatches()`) with automatic cleanup of the oldest
+   results beyond a limit; see the plan for why
 
 ## Build and test
 

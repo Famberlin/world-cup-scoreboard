@@ -48,6 +48,14 @@ public final class Scoreboard {
     public Scoreboard(MatchStore store);
 
     /**
+     * Extra feature. Like {@link #Scoreboard(MatchStore)}, keeping at most {@code resultsLimit}
+     * finished results; the oldest are removed first. Default limit: 104.
+     *
+     * @throws IllegalArgumentException  resultsLimit is less than 1
+     */
+    public Scoreboard(MatchStore store, int resultsLimit);
+
+    /**
      * Starts a match with score 0 - 0 and adds it to the scoreboard.
      *
      * @return snapshot of the new match, carrying the id used by the other operations
@@ -84,7 +92,7 @@ public final class Scoreboard {
 
     /**
      * Extra feature. Final results of finished matches, in the order they were finished
-     * (oldest first).
+     * (oldest first). Holds at most the results limit; older results have been cleaned up.
      *
      * @return an unmodifiable snapshot
      */
@@ -160,6 +168,9 @@ public interface MatchStore {
 
     /** Finished matches in the order they were appended. */
     List<Match> findFinished();
+
+    /** Removes the oldest finished matches until at most {@code maxResults} remain. */
+    void trimFinished(int maxResults);
 }
 ```
 
@@ -171,7 +182,7 @@ Thread-safety contract: `Scoreboard` calls the store only while holding its own 
 responsible for its own consistency; this is documented and out of scope.
 
 `InMemoryMatchStore`: a `HashMap<MatchId, Match>`, a `long` counter and, with the extra feature, an
-`ArrayList<Match>` of results. Not thread-safe on its own, by the
+`ArrayDeque<Match>` of results (cheap removal of the oldest). Not thread-safe on its own, by the
 contract above.
 
 A reusable abstract contract test (`MatchStoreContractTest`) checks the SPI rules. The in-memory store's test
@@ -212,11 +223,15 @@ board.finishMatch(match.id());
   store stays trivial to implement.
 - Store holds no rules: custom stores are easy to write, but cannot optimise ordering (for example
   `ORDER BY` in SQL). An optional sorted query could be added later without breaking the SPI.
-- Finished results are kept forever in the in-memory store (unbounded list). Acceptable for a tournament of 64
-  matches; a long-running service would need a limit or a persistent store.
+- Cleanup of finished results is automatic, by a count limit, not an explicit `clear` operation. An extra public
+  `clearFinishedMatches()` would be a second additional operation, which the assignment rules out; a limit also
+  cannot be forgotten by the caller. Cost: a caller cannot drop results on demand, and the limit counts matches,
+  not age.
+- Default limit 104, the number of matches in the 48-team 2026 World Cup, so a whole tournament fits without
+  tuning while memory stays bounded for a long-running service.
 - The results log is append-only and ordered by the store (insertion order). That is the one ordering a store
   owns, because it is the natural behaviour of any log or table with an auto-increment key.
-- Adding `appendFinished` and `findFinished` to `MatchStore` in the feature commit breaks custom stores written
+- Adding `appendFinished`, `findFinished` and `trimFinished` to `MatchStore` in the feature commit breaks custom stores written
   against the earlier SPI. Accepted: the library has no released version yet. After a release this would be done
   with default methods or a separate `ResultStore` interface.
 
@@ -233,22 +248,24 @@ Test first in every step. Each step is one or two small commits on its own `feat
    equal-total tie test.
 6. **Concurrency**: test that parallel `startMatch` calls with the same team result in exactly one match, and
    that summaries taken during updates are consistent snapshots.
-7. **Extra feature, finished match results**: one distinct commit adding `appendFinished` / `findFinished` to the
-   SPI and the in-memory store (with contract tests), `finishMatch` appending the final snapshot, and
-   `getFinishedMatches()`. Tests: a finished match appears in results with its final score and leaves the summary;
-   results keep finish order; a team can start again after finishing; the returned list is unmodifiable. README
+7. **Extra feature, finished match results with cleanup**: one distinct commit adding `appendFinished`,
+   `findFinished` and `trimFinished` to the SPI and the in-memory store (with contract tests), the `resultsLimit`
+   constructor, `finishMatch` appending the final snapshot and trimming, and `getFinishedMatches()`. Tests: a
+   finished match appears in results with its final score and leaves the summary; results keep finish order; a team
+   can start again after finishing; with limit 2, finishing a third match drops the oldest result; a limit below 1
+   is rejected; the returned list is unmodifiable. README
    section explaining the feature and why it was chosen.
 8. **Documentation**: README assumptions, reasoning, trade-offs; AI.md prompt history updated along the way.
 
 `bash scripts/build.sh` (tests, 90% line coverage gate, Spotless) must pass before each pull request.
 
-## 7. Extra feature: finished match results
+## 7. Extra feature: finished match results, with cleanup
 
 Chosen by Daniel from four candidates (score change listener, goal scored, finished match results, find a team's
 match).
 
-**Operation**: `List<Match> getFinishedMatches()` returns the final result of every finished match, in the order
-the matches finished.
+**Operation**: `List<Match> getFinishedMatches()` returns the final results of finished matches, in the order the
+matches finished. Old results are cleaned up automatically so storage cannot grow without bound.
 
 **Why**: the required operations throw a match away when it finishes, so the scoreboard loses the result the moment
 the match ends. Keeping final results is what a results page or a group table would need next, and it exercises the
@@ -259,5 +276,7 @@ storage SPI beyond the bare minimum.
 - `finishMatch` removes the match from the matches in progress and appends its final snapshot to the results, as
   one step under the write lock, so a reader never sees the match in both or in neither.
 - `getFinishedMatches` takes the read lock and returns `List.copyOf(store.findFinished())`.
-- Results are never changed or removed by the library; there is no "un-finish".
+- Cleanup: right after appending, `finishMatch` calls `store.trimFinished(resultsLimit)`, still under the same
+  lock. The oldest results go first. The limit is set once in the constructor (default 104, minimum 1).
+- Results are never changed by the library, only removed by the cleanup; there is no "un-finish".
 - A team in the results can start a new match: only matches in progress count for `TeamAlreadyPlayingException`.

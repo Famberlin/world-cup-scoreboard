@@ -91,7 +91,12 @@ implementation steps, and candidate extra features. No library code yet.
 
 Extra feature: from the four candidates in the plan (score change listener, goal scored, finished match results,
 find a team's match) Daniel chose **finished match results**. The plan was updated with its API, SPI changes and
-trade-offs.
+trade-offs. Follow-up prompt:
+
+> with cleanup
+
+Result: results are cleaned up automatically by a count limit (`Scoreboard(store, resultsLimit)`, default 104,
+oldest removed first) rather than by a separate clear operation, so the feature stays one operation.
 
 ## Artifacts
 

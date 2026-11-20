@@ -204,6 +204,64 @@ class ScoreboardTest {
         assertThatNullPointerException().isThrownBy(() -> new Scoreboard(null));
     }
 
+    @Test
+    void finishedMatchesAreKeptWithFinalScoreInFinishOrder() {
+        Match mexico = start("Mexico", "Canada", 0, 5);
+        Match spain = start("Spain", "Brazil", 10, 2);
+        start("Germany", "France", 2, 2);
+
+        scoreboard.finishMatch(spain.id());
+        scoreboard.finishMatch(mexico.id());
+
+        assertThat(scoreboard.getFinishedMatches())
+                .map(Match::toString)
+                .containsExactly("Spain 10 - Brazil 2", "Mexico 0 - Canada 5");
+        assertThat(scoreboard.getSummary()).map(Match::toString).containsExactly("Germany 2 - France 2");
+    }
+
+    @Test
+    void noFinishedMatchesInitially() {
+        scoreboard.startMatch("Mexico", "Canada");
+
+        assertThat(scoreboard.getFinishedMatches()).isEmpty();
+    }
+
+    @Test
+    void oldestFinishedMatchesAreCleanedUpBeyondLimit() {
+        Scoreboard limited = new Scoreboard(new InMemoryMatchStore(), 2);
+
+        for (String team : List.of("Mexico", "Spain", "Germany")) {
+            limited.finishMatch(limited.startMatch(team, "Opponent").id());
+        }
+
+        assertThat(limited.getFinishedMatches()).map(Match::homeTeam).containsExactly("Spain", "Germany");
+    }
+
+    @Test
+    void defaultResultsLimitHoldsAWholeTournament() {
+        for (int i = 0; i < Scoreboard.DEFAULT_RESULTS_LIMIT + 1; i++) {
+            scoreboard.finishMatch(scoreboard.startMatch("Home", "Away").id());
+        }
+
+        assertThat(scoreboard.getFinishedMatches()).hasSize(104);
+    }
+
+    @Test
+    void rejectsResultsLimitBelowOne() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new Scoreboard(new InMemoryMatchStore(), 0));
+    }
+
+    @Test
+    void finishedMatchesAreUnmodifiableSnapshot() {
+        scoreboard.finishMatch(scoreboard.startMatch("Mexico", "Canada").id());
+        List<Match> finished = scoreboard.getFinishedMatches();
+
+        scoreboard.finishMatch(scoreboard.startMatch("Spain", "Brazil").id());
+
+        assertThat(finished).hasSize(1);
+        assertThatThrownBy(finished::clear).isInstanceOf(UnsupportedOperationException.class);
+    }
+
     private Match start(String home, String away, int homeScore, int awayScore) {
         Match match = scoreboard.startMatch(home, away);
         return scoreboard.updateScore(match.id(), homeScore, awayScore);

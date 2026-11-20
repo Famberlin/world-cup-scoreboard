@@ -15,6 +15,9 @@ import java.util.function.Supplier;
  * <p>All business rules live here: input validation, one match in progress per team, and the summary order. The
  * matches themselves are kept in a {@link MatchStore}.
  *
+ * <p>Finished matches are kept as results (see {@link #getFinishedMatches()}); the oldest are cleaned up once there
+ * are more than the results limit.
+ *
  * <p>This class is thread-safe. Operations that change the scoreboard run one at a time; summaries can be read in
  * parallel. Every returned {@link Match} and list is an immutable snapshot.
  */
@@ -25,7 +28,11 @@ public final class Scoreboard {
             .thenComparingLong(Match::startSequence)
             .reversed();
 
+    /** Results kept by default: the number of matches in the 48-team 2026 World Cup. */
+    public static final int DEFAULT_RESULTS_LIMIT = 104;
+
     private final MatchStore store;
+    private final int resultsLimit;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     /** Creates a scoreboard backed by a new {@link InMemoryMatchStore}. */
@@ -40,7 +47,24 @@ public final class Scoreboard {
      * @throws NullPointerException if {@code store} is null
      */
     public Scoreboard(MatchStore store) {
+        this(store, DEFAULT_RESULTS_LIMIT);
+    }
+
+    /**
+     * Creates a scoreboard backed by the given store that keeps at most {@code resultsLimit} finished match results.
+     * When a match finishes and the limit is exceeded, the oldest results are removed.
+     *
+     * @param store where matches in progress and results are kept
+     * @param resultsLimit maximum number of finished match results to keep
+     * @throws NullPointerException if {@code store} is null
+     * @throws IllegalArgumentException if {@code resultsLimit} is less than 1
+     */
+    public Scoreboard(MatchStore store, int resultsLimit) {
+        if (resultsLimit < 1) {
+            throw new IllegalArgumentException("resultsLimit must be at least 1, was " + resultsLimit);
+        }
         this.store = Objects.requireNonNull(store, "store");
+        this.resultsLimit = resultsLimit;
     }
 
     /**
@@ -97,7 +121,8 @@ public final class Scoreboard {
     }
 
     /**
-     * Finishes a match in progress and removes it from the scoreboard.
+     * Finishes a match in progress, removes it from the scoreboard and keeps its final snapshot as a result. If
+     * there are then more results than the results limit, the oldest are removed.
      *
      * @param id id of the match
      * @return the final snapshot of the match
@@ -109,6 +134,8 @@ public final class Scoreboard {
         return write(() -> {
             Match match = find(id);
             store.delete(id);
+            store.appendFinished(match);
+            store.trimFinished(resultsLimit);
             return match;
         });
     }
@@ -120,6 +147,16 @@ public final class Scoreboard {
      */
     public List<Match> getSummary() {
         return read(() -> store.findAll().stream().sorted(SUMMARY_ORDER).toList());
+    }
+
+    /**
+     * Final results of finished matches, oldest first. Holds at most the results limit; older results have been
+     * cleaned up.
+     *
+     * @return an unmodifiable snapshot; later changes to the scoreboard do not affect it
+     */
+    public List<Match> getFinishedMatches() {
+        return read(() -> List.copyOf(store.findFinished()));
     }
 
     private Match find(MatchId id) {

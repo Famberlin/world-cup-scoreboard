@@ -10,8 +10,31 @@ simultaneous matches.
 3. Finish a match
 4. Get a summary of matches in progress, ordered by total score (descending), ties broken by the most
    recently started match first
-5. Additional feature: finished match results (`getFinishedMatches()`) with automatic cleanup of the oldest
-   results beyond a limit; see the plan for why
+5. Additional feature: finished match results with automatic cleanup (see below)
+
+## Additional feature: finished match results
+
+`getFinishedMatches()` returns the final results of finished matches, oldest first. `finishMatch` moves the match
+from the matches in progress to the results in one step, so a reader never sees it in both or in neither.
+
+Old results are cleaned up automatically: the scoreboard keeps at most `resultsLimit` results and drops the oldest
+when a match finishes beyond it. The limit is set once, `new Scoreboard(store, resultsLimit)`, and defaults to 104,
+the number of matches in the 48-team 2026 World Cup, so a whole tournament fits without tuning.
+
+```java
+Scoreboard board = new Scoreboard(new InMemoryMatchStore(), 10);   // keep the last 10 results
+Match match = board.startMatch("Spain", "Brazil");
+board.updateScore(match.id(), 2, 1);
+board.finishMatch(match.id());
+board.getFinishedMatches();                                        // [Spain 2 - Brazil 1]
+```
+
+Why this feature: the required operations throw a match away the moment it finishes, so the scoreboard loses the
+result exactly when it becomes final. Keeping results is the next thing a results page or group table needs, and
+it uses the storage interface beyond the bare minimum (`appendFinished`, `findFinished`, `trimFinished`).
+
+Why cleanup by a limit and not a `clearFinishedMatches()` operation: the assignment allows exactly one additional
+operation, and a limit cannot be forgotten by the caller. The cost is that results cannot be dropped on demand.
 
 ## Build and test
 

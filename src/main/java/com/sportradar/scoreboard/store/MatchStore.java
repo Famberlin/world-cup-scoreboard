@@ -3,10 +3,11 @@ package com.sportradar.scoreboard.store;
 import com.sportradar.scoreboard.Match;
 import com.sportradar.scoreboard.MatchId;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Storage of matches in progress. Implement it to keep the scoreboard in custom storage and pass the implementation
+ * Storage of matches in progress and of finished match results. Implement it to keep the scoreboard in custom storage and pass the implementation
  * to {@link com.sportradar.scoreboard.Scoreboard#Scoreboard(MatchStore)}.
  *
  * <p>A store only keeps and returns matches. Validation, uniqueness of teams and the summary order are enforced by
@@ -68,4 +69,26 @@ public interface MatchStore {
                 .anyMatch(match -> match.homeTeam().equalsIgnoreCase(team)
                         || match.awayTeam().equalsIgnoreCase(team));
     }
+
+    /**
+     * Appends the final snapshot of a finished match to the results. Results are kept apart from matches in
+     * progress: they never appear in {@link #findAll()} or count for {@link #isTeamPlaying(String)}.
+     *
+     * @param match the finished match
+     */
+    void appendFinished(Match match);
+
+    /**
+     * Finished match results.
+     *
+     * @return the results in the order they were appended, oldest first
+     */
+    List<Match> findFinished();
+
+    /**
+     * Removes the oldest results until at most {@code maxResults} remain.
+     *
+     * @param maxResults number of most recent results to keep, at least 1
+     */
+    void trimFinished(int maxResults);
 }

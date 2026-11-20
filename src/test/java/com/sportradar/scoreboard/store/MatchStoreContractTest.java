@@ -102,6 +102,51 @@ abstract class MatchStoreContractTest {
         assertThat(store.isTeamPlaying("Spain")).isFalse();
     }
 
+    @Test
+    void finishedMatchesKeepAppendOrder() {
+        Match first = match("Spain", "Brazil");
+        Match second = match("Germany", "France");
+
+        store.appendFinished(first);
+        store.appendFinished(second);
+
+        assertThat(store.findFinished()).containsExactly(first, second);
+    }
+
+    @Test
+    void finishedMatchesAreSeparateFromMatchesInProgress() {
+        Match match = match("Spain", "Brazil");
+
+        store.appendFinished(match);
+
+        assertThat(store.findAll()).isEmpty();
+        assertThat(store.isTeamPlaying("Spain")).isFalse();
+    }
+
+    @Test
+    void trimRemovesOldestFinishedMatches() {
+        Match first = match("Spain", "Brazil");
+        Match second = match("Germany", "France");
+        Match third = match("Uruguay", "Italy");
+        store.appendFinished(first);
+        store.appendFinished(second);
+        store.appendFinished(third);
+
+        store.trimFinished(2);
+
+        assertThat(store.findFinished()).containsExactly(second, third);
+    }
+
+    @Test
+    void trimKeepsEverythingWithinLimit() {
+        Match match = match("Spain", "Brazil");
+        store.appendFinished(match);
+
+        store.trimFinished(5);
+
+        assertThat(store.findFinished()).containsExactly(match);
+    }
+
     private Match match(String home, String away) {
         return new Match(new MatchId(UUID.randomUUID()), home, away, 0, 0, store.nextSequence());
     }

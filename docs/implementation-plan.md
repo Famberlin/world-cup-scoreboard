@@ -9,7 +9,7 @@ Decisions summarised here are carried into `README.md` (assumptions, reasoning, 
   simultaneous matches.
 - Required operations: start a match, update its score, finish it, and get a summary of matches in progress
   ordered by total score (descending), ties broken by the most recently started match first.
-- Exactly one additional operation, introduced in its own commit (candidates in section 7).
+- Exactly one additional operation, introduced in its own commit: **finished match results** (section 7).
 - Storage is pluggable: the library defines a storage interface (SPI) that users implement to keep matches
   wherever they want. The library ships a default in-memory implementation, used when no store is given.
 
@@ -66,7 +66,8 @@ public final class Scoreboard {
     public Match updateScore(MatchId id, int homeScore, int awayScore);
 
     /**
-     * Finishes a match in progress and removes it from the scoreboard.
+     * Finishes a match in progress and removes it from the scoreboard. Once the extra feature
+     * lands, the final snapshot is also kept as a result (see getFinishedMatches).
      *
      * @return the final snapshot of the match
      * @throws MatchNotFoundException  no match in progress has this id (including one already finished)
@@ -80,6 +81,14 @@ public final class Scoreboard {
      * @return an unmodifiable snapshot; later changes to the scoreboard do not affect it
      */
     public List<Match> getSummary();
+
+    /**
+     * Extra feature. Final results of finished matches, in the order they were finished
+     * (oldest first).
+     *
+     * @return an unmodifiable snapshot
+     */
+    public List<Match> getFinishedMatches();
 }
 ```
 
@@ -143,14 +152,26 @@ public interface MatchStore {
      * stores with an index should override it.
      */
     default boolean isTeamPlaying(String team) { ... }
+
+    // Added by the extra feature (section 7):
+
+    /** Appends the final snapshot of a finished match to the results log. */
+    void appendFinished(Match match);
+
+    /** Finished matches in the order they were appended. */
+    List<Match> findFinished();
 }
 ```
+
+Matches in progress and finished results are kept apart: `findAll` and `isTeamPlaying` only ever see matches in
+progress, so a team can start a new match after its previous one finished.
 
 Thread-safety contract: `Scoreboard` calls the store only while holding its own lock, so a store used by a single
 `Scoreboard` does not need to be thread-safe. A store shared by several `Scoreboard` instances or processes is
 responsible for its own consistency; this is documented and out of scope.
 
-`InMemoryMatchStore`: a `HashMap<MatchId, Match>` plus a `long` counter. Not thread-safe on its own, by the
+`InMemoryMatchStore`: a `HashMap<MatchId, Match>`, a `long` counter and, with the extra feature, an
+`ArrayList<Match>` of results. Not thread-safe on its own, by the
 contract above.
 
 A reusable abstract contract test (`MatchStoreContractTest`) checks the SPI rules. The in-memory store's test
@@ -191,7 +212,13 @@ board.finishMatch(match.id());
   store stays trivial to implement.
 - Store holds no rules: custom stores are easy to write, but cannot optimise ordering (for example
   `ORDER BY` in SQL). An optional sorted query could be added later without breaking the SPI.
-- Finished matches are deleted from the store, not archived. History, if wanted, is the extra feature.
+- Finished results are kept forever in the in-memory store (unbounded list). Acceptable for a tournament of 64
+  matches; a long-running service would need a limit or a persistent store.
+- The results log is append-only and ordered by the store (insertion order). That is the one ordering a store
+  owns, because it is the natural behaviour of any log or table with an auto-increment key.
+- Adding `appendFinished` and `findFinished` to `MatchStore` in the feature commit breaks custom stores written
+  against the earlier SPI. Accepted: the library has no released version yet. After a release this would be done
+  with default methods or a separate `ResultStore` interface.
 
 ## 6. Implementation steps
 
@@ -206,18 +233,31 @@ Test first in every step. Each step is one or two small commits on its own `feat
    equal-total tie test.
 6. **Concurrency**: test that parallel `startMatch` calls with the same team result in exactly one match, and
    that summaries taken during updates are consistent snapshots.
-7. **Extra feature**: in its own distinct commit, with README section explaining it and why it was chosen.
+7. **Extra feature, finished match results**: one distinct commit adding `appendFinished` / `findFinished` to the
+   SPI and the in-memory store (with contract tests), `finishMatch` appending the final snapshot, and
+   `getFinishedMatches()`. Tests: a finished match appears in results with its final score and leaves the summary;
+   results keep finish order; a team can start again after finishing; the returned list is unmodifiable. README
+   section explaining the feature and why it was chosen.
 8. **Documentation**: README assumptions, reasoning, trade-offs; AI.md prompt history updated along the way.
 
 `bash scripts/build.sh` (tests, 90% line coverage gate, Spotless) must pass before each pull request.
 
-## 7. Candidate extra features
+## 7. Extra feature: finished match results
 
-Pick one; it gets its own commit.
+Chosen by Daniel from four candidates (score change listener, goal scored, finished match results, find a team's
+match).
 
-| Option | Operation | Why it is useful | Cost |
-|---|---|---|---|
-| **A. Score change listener** (recommended) | `Subscription subscribe(ScoreboardListener listener)` with callbacks `onStarted`, `onScoreUpdated`, `onFinished` | A sports data company pushes live updates; this is how a scoreboard feeds a website or app. Fits the pluggable design next to the store SPI. | Medium: listeners are called after the lock is released, a failing listener must not break the scoreboard. |
-| B. Goal scored | `Match scoreGoal(MatchId id, Side side)` | Matches event-based feeds that send "goal for home" rather than absolute scores. | Small. |
-| C. Finished match results | `List<Match> getFinishedMatches()` | Keeps final results after a match leaves the board. | Medium: the SPI grows (finished state or a second collection). |
-| D. Find a team's match | `Optional<Match> findMatchByTeam(String team)` | Lets callers work with team names instead of keeping ids. | Small, reuses `isTeamPlaying` logic. |
+**Operation**: `List<Match> getFinishedMatches()` returns the final result of every finished match, in the order
+the matches finished.
+
+**Why**: the required operations throw a match away when it finishes, so the scoreboard loses the result the moment
+the match ends. Keeping final results is what a results page or a group table would need next, and it exercises the
+storage SPI beyond the bare minimum.
+
+**Behaviour**:
+
+- `finishMatch` removes the match from the matches in progress and appends its final snapshot to the results, as
+  one step under the write lock, so a reader never sees the match in both or in neither.
+- `getFinishedMatches` takes the read lock and returns `List.copyOf(store.findFinished())`.
+- Results are never changed or removed by the library; there is no "un-finish".
+- A team in the results can start a new match: only matches in progress count for `TeamAlreadyPlayingException`.

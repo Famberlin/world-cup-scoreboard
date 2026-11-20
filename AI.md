@@ -89,6 +89,10 @@ Result: `docs/implementation-plan.md` with the public API, the `MatchStore` stor
 decisions on the open questions (validation, duplicate teams, start ordering, concurrency, immutability), the
 implementation steps, and candidate extra features. No library code yet.
 
+Extra feature: from the four candidates in the plan (score change listener, goal scored, finished match results,
+find a team's match) Daniel chose **finished match results**. The plan was updated with its API, SPI changes and
+trade-offs.
+
 ## Artifacts
 
 - `AGENTS.md` / `CLAUDE.md`: rules given to coding agents working in this repo.

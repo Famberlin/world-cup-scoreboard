@@ -17,3 +17,33 @@ jobs:
           cache: maven
       - name: Verify (tests, coverage gate, format check)
         run: mvn verify -Dspotless.apply.skip=true
+
+  # Secrets cannot be read in a job-level `if`, so this job only reports whether SNYK_TOKEN is set.
+  snyk-token:
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - id: check
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: echo "present=$([ -n "$SNYK_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  # Optional dependency scan: runs only when the repository has a SNYK_TOKEN secret, shown as skipped otherwise
+  # (also on pull requests from forks, which get no secrets).
+  snyk:
+    needs: snyk-token
+    if: needs.snyk-token.outputs.present == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: snyk/actions/setup@master
+      - name: Snyk test (all modules, high severity and above)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --maven-aggregate-project --severity-threshold=high

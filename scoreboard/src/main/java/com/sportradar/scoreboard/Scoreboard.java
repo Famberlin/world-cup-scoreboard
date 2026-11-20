@@ -72,7 +72,8 @@ public final class Scoreboard {
      * @param homeTeam home team name
      * @param awayTeam away team name
      * @return snapshot of the new match, carrying the id used by the other operations
-     * @throws IllegalArgumentException if a team name is null or blank, or both names are the same team
+     * @throws IllegalArgumentException if a team name is null, blank, longer than {@link Match#MAX_TEAM_NAME_LENGTH} or
+     *     contains control or invisible format characters, or both names are the same team
      * @throws TeamAlreadyPlayingException if either team is already in a match in progress
      */
     public Match startMatch(String homeTeam, String awayTeam) {
@@ -101,14 +102,13 @@ public final class Scoreboard {
      * @param homeScore new home score
      * @param awayScore new away score
      * @return snapshot of the updated match
-     * @throws IllegalArgumentException if {@code id} is null or a score is negative
+     * @throws IllegalArgumentException if {@code id} is null or a score is negative or above {@link Match#MAX_SCORE}
      * @throws MatchNotFoundException if no match in progress has this id
      */
     public Match updateScore(MatchId id, int homeScore, int awayScore) {
         Arguments.requireNotNull(id, "id");
-        if (homeScore < 0 || awayScore < 0) {
-            throw new IllegalArgumentException("Scores must not be negative, were " + homeScore + " and " + awayScore);
-        }
+        Arguments.requireScore(homeScore, "homeScore");
+        Arguments.requireScore(awayScore, "awayScore");
         return write(() -> {
             Match updated = find(id).withScore(homeScore, awayScore);
             store.save(updated);

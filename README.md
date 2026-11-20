@@ -73,7 +73,10 @@ deployed POMs, so consumers never see `${revision}`. The generated `.flattened-p
 
 ### CI
 
-GitHub Actions runs `mvn verify` with a check-only Spotless on every push to `main` and every pull request. A Snyk
+GitHub Actions runs `mvn verify` with a check-only Spotless on every push to `main` and every pull request. The
+workflow token is read-only (`permissions: contents: read`), every action is pinned to a full commit SHA with its
+version in a comment, and checkouts do not keep the token in `.git/config` (`persist-credentials: false`).
+Dependabot (`.github/dependabot.yml`) proposes weekly updates to the pinned actions. A Snyk
 dependency scan (`snyk test`, all modules, fails on high severity or above) runs only when the repository has a
 `SNYK_TOKEN` secret; without it the job shows as skipped and the build stays green. Pull requests from forks get
 no secrets, so they skip it too.
@@ -105,17 +108,28 @@ how to run it against an implementation.
 ## Assumptions
 
 - A match is identified by the `MatchId` returned from `startMatch`, not by its team names.
-- Team names are trimmed and otherwise kept as given. They are compared ignoring case, so "Spain" and "spain" are
-  the same team.
+- Team names are stripped, normalized to Unicode NFC and otherwise kept as given. They are compared ignoring case,
+  so "Spain" and "spain" are the same team, and NFC makes "C\u00F4te d'Ivoire" (precomposed o with
+  circumflex) and "Co\u0302te d'Ivoire" (o plus a combining circumflex) the same team too.
+- A team name is at most `Match.MAX_TEAM_NAME_LENGTH` (64) code points after stripping and normalization; the
+  longest FIFA member name has about 30. Control characters and invisible format characters (zero-width space and
+  joiners, soft hyphen, bidi overrides, byte order mark: Unicode categories Cc and Cf) are rejected, not removed.
+  Otherwise "Spa\u200Bin" would look like "Spain" on screen but count as another team, and slip past the same-team
+  and already-playing checks.
+- NFC is canonical, not compatibility, normalization: fullwidth or styled letters and lookalikes from other scripts
+  (a Cyrillic `U+0430` "a" in "Spain") are still different teams. Catching those needs a confusables table, which is out of
+  scope for a scoreboard that receives names from its own operator.
 - A team plays at most one match at a time. Starting a match for a team already in a match in progress throws
   `TeamAlreadyPlayingException`; this also catches starting the same match twice. A team may play again once its
   match has finished.
 - Scores are absolute (`updateScore(id, 2, 1)`), never negative, and may go down, to allow corrections such as a
   disallowed goal.
+- A score is at most `Match.MAX_SCORE` (999). That is far above any real football score and keeps `totalScore()`
+  of two maximum scores well inside `int`, so the summary ordering can never be broken by an overflow.
 - Updating or finishing an unknown or already finished match throws `MatchNotFoundException`; finishing twice is a
   caller error, not a no-op.
-- Every invalid argument throws `IllegalArgumentException`: null arguments, blank names, the same team on both
-  sides and negative scores. Callers handle one exception type for bad input; the library never throws
+- Every invalid argument throws `IllegalArgumentException`: null arguments, blank, overlong or hidden-character
+  names, the same team on both sides, and scores below 0 or above the maximum. Callers handle one exception type for bad input; the library never throws
   `NullPointerException` on purpose.
 - "Most recently started" means the order of `startMatch` calls, not a clock.
 

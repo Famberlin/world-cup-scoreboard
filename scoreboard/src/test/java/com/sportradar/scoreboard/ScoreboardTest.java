@@ -45,6 +45,35 @@ class ScoreboardTest {
     }
 
     @Test
+    void startRejectsSameTeamSpelledWithDecomposedAccent() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> scoreboard.startMatch("C\u00f4te d'Ivoire", "Co\u0302te d'Ivoire"));
+    }
+
+    @Test
+    void startRejectsTeamAlreadyPlayingUnderDecomposedSpelling() {
+        scoreboard.startMatch("C\u00f4te d'Ivoire", "Ghana");
+
+        assertThatThrownBy(() -> scoreboard.startMatch("Co\u0302te d'Ivoire", "Senegal"))
+                .isInstanceOf(TeamAlreadyPlayingException.class);
+    }
+
+    @Test
+    void startRejectsLookalikeNameWithInvisibleCharacter() {
+        scoreboard.startMatch("Spain", "Brazil");
+
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.startMatch("Spa\u200bin", "Italy"));
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.startMatch("Spain", "Spain\u2060"));
+        assertThat(scoreboard.getSummary()).hasSize(1);
+    }
+
+    @Test
+    void startRejectsOverlongTeamName() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> scoreboard.startMatch("A".repeat(Match.MAX_TEAM_NAME_LENGTH + 1), "Canada"));
+    }
+
+    @Test
     void startRejectsTeamAlreadyPlayingOnEitherSide() {
         scoreboard.startMatch("Spain", "Brazil");
 
@@ -96,6 +125,25 @@ class ScoreboardTest {
 
         assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.updateScore(match.id(), -1, 0));
         assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.updateScore(match.id(), 0, -1));
+        assertThat(scoreboard.getSummary()).containsExactly(match);
+    }
+
+    @Test
+    void updateAcceptsMaximumScoreWithoutOverflow() {
+        Match match = scoreboard.startMatch("Mexico", "Canada");
+
+        Match updated = scoreboard.updateScore(match.id(), Match.MAX_SCORE, Match.MAX_SCORE);
+
+        assertThat(updated.totalScore()).isEqualTo(2 * Match.MAX_SCORE);
+    }
+
+    @Test
+    void updateRejectsScoreAboveMaximum() {
+        Match match = scoreboard.startMatch("Mexico", "Canada");
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> scoreboard.updateScore(match.id(), Match.MAX_SCORE + 1, 0));
+        assertThatIllegalArgumentException().isThrownBy(() -> scoreboard.updateScore(match.id(), 0, Integer.MAX_VALUE));
         assertThat(scoreboard.getSummary()).containsExactly(match);
     }
 

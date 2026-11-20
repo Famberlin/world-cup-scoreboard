@@ -49,6 +49,7 @@ bash scripts/build.sh compile                           # compile only
 ## Git
 
 - Branch from latest `main` (`git fetch origin main && git checkout -b <branch> origin/main`); rebase if behind.
-- Branches: `feature/<kebab-summary>` or `bugfix/<kebab-summary>`, max 5-6 words.
+- Branch names: `{feature|bugfix}/{short-feature-summary}`, summary in kebab-case, max 5-6 words
+  (`feature/maven-project-scaffold`, `bugfix/summary-tie-ordering`). No other prefixes.
 - Small atomic commits, imperative messages. The additional feature from the task gets its own distinct commit.
 - Update `README.md` (decisions, trade-offs) and `AI.md` (prompt history) in the same change.

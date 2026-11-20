@@ -73,7 +73,10 @@ deployed POMs, so consumers never see `${revision}`. The generated `.flattened-p
 
 ### CI
 
-GitHub Actions runs `mvn verify` with a check-only Spotless on every push to `main` and every pull request. A Snyk
+GitHub Actions runs `mvn verify` with a check-only Spotless on every push to `main` and every pull request. The
+workflow token is read-only (`permissions: contents: read`), every action is pinned to a full commit SHA with its
+version in a comment, and checkouts do not keep the token in `.git/config` (`persist-credentials: false`).
+Dependabot (`.github/dependabot.yml`) proposes weekly updates to the pinned actions. A Snyk
 dependency scan (`snyk test`, all modules, fails on high severity or above) runs only when the repository has a
 `SNYK_TOKEN` secret; without it the job shows as skipped and the build stays green. Pull requests from forks get
 no secrets, so they skip it too.

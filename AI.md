@@ -116,6 +116,20 @@ assumptions, reasoning and trade-offs.
 `IllegalArgumentException` everywhere through a package-private `Arguments` helper; all `Objects.requireNonNull`
 calls and `NullPointerException` docs removed.
 
+### 6. Multi-module build, CI-friendly versioning, optional Snyk scan
+
+> create parent pom, move library to module. move test dependencies and build instructions to parent. add optional
+> snyk pipeline if token is present
+
+Follow-up prompt:
+
+> add ci-friendly versioning
+
+Result: root `pom.xml` became a parent POM (packaging `pom`) with all versions, the test dependencies and the plugin
+configuration; the library moved to the `scoreboard/` module, keeping its artifactId. Version is
+`${revision}${sha1}${changelist}` with `flatten-maven-plugin`. `scripts/build.sh` reads test reports from every
+module. CI got a Snyk job that runs only when a `SNYK_TOKEN` secret exists and is skipped otherwise.
+
 ## Artifacts
 
 - `AGENTS.md` / `CLAUDE.md`: rules given to coding agents working in this repo.
